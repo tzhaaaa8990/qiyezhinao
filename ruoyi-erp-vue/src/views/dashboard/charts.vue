@@ -67,7 +67,7 @@
           <el-card class="box-card" shadow="never">
             <div class="card-title">仓库货物占比</div>
             <div style="height: calc(100% - 30px);">
-              <StationPie height="100%" :pieData="overview.warehouseGoods"></StationPie>
+              <StationPie height="100%" :pieData="overview.warehouseGoods.filter(g=>g.value>0)"></StationPie>
               <div></div>
             </div>
           </el-card>
@@ -75,7 +75,7 @@
         <el-col :span="18">
           <el-card class="box-card" shadow="never">
             <div style="display:flex;justify-content: space-between;align-items: center;">
-              <div class="card-title">生产入库趋势</div>
+              <div class="card-title">月度销售趋势（元）</div>
               <el-radio-group v-model="tabPosition" @change="dateChange">
                 <!-- <el-radio-button label="day">当日</el-radio-button> -->
                 <el-radio-button label="month">本月</el-radio-button>
@@ -109,21 +109,17 @@
         </el-col>
         <el-col :span="6">
           <el-card class="box-card" shadow="never">
-            <div class="card-title">近7日调拨</div>
-            <div style="height: calc(100% - 30px);">
-              <StationLine height="100%"  :chartData="lineDataThree" yName="件"
-                           itemColor="#c58bea"
-              />
+            <div class="card-title">本月销售额</div>
+            <div style="display:flex;align-items:center;justify-content:center;height:calc(100% - 30px)">
+              <span style="font-size:36px;font-weight:bold;color:#ee4368">¥{{ overview.outbound.monthSales || 0 }}</span>
             </div>
           </el-card>
         </el-col>
         <el-col :span="6">
           <el-card class="box-card" shadow="never">
-            <div class="card-title">近7日退货入库</div>
-            <div style="height: calc(100% - 30px);">
-              <StationLine height="100%" yName="件" :chartData="lineDataFour"
-                           itemColor="#c7a428"
-              />
+            <div class="card-title">本月采购额</div>
+            <div style="display:flex;align-items:center;justify-content:center;height:calc(100% - 30px)">
+              <span style="font-size:36px;font-weight:bold;color:#5470c6">¥{{ overview.inbound.monthPurchase || 0 }}</span>
             </div>
           </el-card>
         </el-col>

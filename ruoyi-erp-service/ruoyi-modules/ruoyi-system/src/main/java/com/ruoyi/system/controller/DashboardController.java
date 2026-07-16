@@ -87,6 +87,13 @@ public class DashboardController {
             "GROUP BY DATE_FORMAT(doc_date, '%Y-%m') ORDER BY month DESC LIMIT 12");
         data.put("monthlySales", monthlySales);
 
+        // ---- 库存预警详细(SKU qty<10) ----
+        data.put("lowStockItems", jdbc.queryForList(
+            "SELECT sku.sku_name AS name, i.qty, w.warehouse_name AS warehouse " +
+            "FROM wms_inventory i JOIN basic_sku sku ON sku.id=i.sku_id " +
+            "JOIN basic_warehouse w ON w.id=i.warehouse_id " +
+            "WHERE i.qty > 0 AND i.qty < 10 ORDER BY i.qty ASC LIMIT 10"));
+
         // ---- 今日出入库流水 ----
         List<Map<String, Object>> todayFlow = jdbc.queryForList(
             "SELECT '入库' AS type, d.create_time AS time, sku.sku_name AS item, dd.qty " +

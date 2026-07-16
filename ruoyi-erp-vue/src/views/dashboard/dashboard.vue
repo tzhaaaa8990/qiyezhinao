@@ -24,9 +24,15 @@
           </div>
         </div>
         <div class="content-status">
-          <div class="box-title">仓库货物占比</div>
+          <div class="box-title">库存预警</div>
           <div class="box-content">
-            <CirclePieChart height="100%" :pieData="pieData"/>
+            <div style="padding:8px;color:#fff;font-size:15px;line-height:2.4;max-height:100%;overflow-y:auto">
+              <div v-for="item in overview.lowStockItems" :key="item.name" style="display:flex;justify-content:space-between">
+                <span>{{ item.name }}<span style="font-size:11px;color:#909399;margin-left:4px">{{ item.warehouse }}</span></span>
+                <span :style="{color:item.qty<=3?'#e0c464':'#6be6c3'}">仅剩 {{ item.qty }}</span>
+              </div>
+              <div v-if="!overview.lowStockItems || overview.lowStockItems.length===0" style="color:#6be6c3;text-align:center;padding:20px">无库存预警</div>
+            </div>
           </div>
         </div>
         <div class="content-alarm">
@@ -44,7 +50,7 @@
       <div class="content-middle flex-column-between">
         <div class="content-map" id="boardMap"></div>
         <div class="content-chart">
-          <div class="box-title">近30日销售趋势</div>
+          <div class="box-title">月度销售趋势（元）</div>
           <div class="box-content">
             <el-tabs
               v-model="activeName"
@@ -130,7 +136,7 @@
         </div>
 
         <div class="content-carbon">
-          <div class="box-title">今日出入库流水</div>
+          <div class="box-title">各仓库库存</div>
           <div class="box-content">
             <barChart
               :height="'100%'"
@@ -171,6 +177,7 @@ const xData = ref([])
 const electricityData = ref([])
 const waterData = ref([])
 const energyData = ref([])
+const whXData = ref([]); const whYData = ref([])  // 仓库库存柱状图
 const carbonData = ref([])
 
 const overview = ref({
@@ -181,14 +188,14 @@ const overview = ref({
 function loadData() {
   request({ url: '/dashboard/overview', method: 'get' }).then(res => {
     overview.value = res.data
-    pieData.value = (res.data.warehouseGoods || []).map((g, i) => ({
-      value: g.value, name: g.name,
-      itemStyle: { color: ['#6be6c3','#5470c6','#e0c464','#ee4368','#c58bea','#297ef8'][i % 6] }
-    }))
     const sales = (res.data.monthlySales || []).slice().reverse()
     xData.value = sales.map(r => r.month)
     energyData.value = sales.map(r => r.amount)
     carbonData.value = sales.map(r => r.count)
+    // 各仓库库存柱状图
+    const wh = (res.data.warehouseGoods || []).filter(g => g.value > 0)
+    whXData.value = wh.map(g => g.name)
+    whYData.value = wh.map(g => g.value)
   })
 }
 
@@ -765,9 +772,9 @@ onBeforeUnmount(() => {
   background-clip: text;
   -webkit-background-clip: text;
   color: transparent;
-  font-size: 40px;
+  font-size: 52px;
   font-weight: bold;
-  letter-spacing: 8px;
+  letter-spacing: 12px;
   height: 9%;
   display: flex;
   align-items: center;
@@ -799,15 +806,27 @@ onBeforeUnmount(() => {
 .content-overview {
   height: 20%;
   margin-bottom: 12px;
-  padding: 12px 16px;
+  padding: 16px 20px;
+}
+
+.content-status {
+  height: calc(40% - 12px);
+  margin-bottom: 12px;
+  padding: 16px 20px;
+}
+
+.content-alarm {
+  height: calc(40% - 12px);
+  padding: 14px 16px;
 }
 
 .box-title {
-  height: 20px;
+  height: 28px;
   margin-left: 12px;
   display: flex;
   align-items: center;
   color: #01d1ff;
+  font-size: 16px;
 }
 
 .box-title::before {
@@ -836,13 +855,13 @@ onBeforeUnmount(() => {
 
 .object-count {
   color: #1be5e7;
-  font-size: 35px;
+  font-size: 52px;
   font-weight: bold;
-  margin-bottom: 6px;
+  margin-bottom: 10px;
 }
 
 .object-name {
-  font-size: 12px;
+  font-size: 18px;
 }
 
 .content-status {
@@ -876,7 +895,7 @@ onBeforeUnmount(() => {
 
 .content-statistics {
   height: 20%;
-  padding: 12px 16px;
+  padding: 16px 20px;
 }
 
 .content-trend {
@@ -892,15 +911,15 @@ onBeforeUnmount(() => {
 .statistics-item {
   width: calc(33% - 8px);
   align-items: center;
-  font-size: 12px;
+  font-size: 15px;
 }
 
 .item-count {
   text-align: center;
-  font-size: 28px;
+  font-size: 40px;
   font-weight: bold;
   color: #1be5e7;
-  margin: 6px 0 6px;
+  margin: 8px 0 8px;
 }
 
 .trend-tabs {
