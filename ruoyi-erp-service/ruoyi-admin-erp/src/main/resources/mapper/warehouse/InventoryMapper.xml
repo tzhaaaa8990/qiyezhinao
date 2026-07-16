@@ -1,0 +1,69 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.ruoyi.erp.warehouse.mapper.InventoryMapper">
+
+    <resultMap id="inventoryVoMap" type="com.ruoyi.erp.warehouse.domain.vo.InventoryVo">
+        <association property="sku" javaType="com.ruoyi.erp.basic.domain.vo.SkuVo">
+            <id property="id" column="sku_id"/> <!-- 映射 sku 的 id -->
+        </association>
+        <association property="goods" javaType="com.ruoyi.erp.basic.domain.vo.GoodsVo">
+            <id property="id" column="goods_id"/> <!-- 映射 goods 的 id -->
+        </association>
+    </resultMap>
+
+    <sql id="selectVoListByBo">
+        select
+        inventory.*,
+        sku.id as sku_id,
+        sku.*,
+        goods.id as goods_id,
+        goods.*
+        from wms_inventory inventory
+        inner join basic_sku sku on inventory.sku_id=sku.id
+        inner join basic_goods goods on sku.goods_id=goods.id
+        <where>
+            <if test="bo.goodsName != null and bo.goodsName != ''">
+                goods.goods_name like concat('%', #{bo.goodsName}, '%')
+            </if>
+            <if test="bo.goodsNo != null and bo.goodsNo != ''">
+                and goods.goods_no like concat('%', #{bo.goodsNo}, '%')
+            </if>
+            <if test="bo.skuName != null and bo.skuName != ''">
+                and sku.sku_name like concat('%', #{bo.skuName}, '%')
+            </if>
+            <if test="bo.skuNo != null and bo.skuNo != ''">
+                and sku.sku_no like concat('%', #{bo.skuNo}, '%')
+            </if>
+            <if test="bo.categoryId != null">
+                and goods.category_id=#{bo.categoryId}
+            </if>
+            <if test="bo.goodsId != null">
+                and goods.id=#{bo.goodsId}
+            </if>
+            <if test="bo.warehouseId != null">
+                and inventory.warehouse_id=#{bo.warehouseId}
+            </if>
+            <if test="bo.minQty != null">
+                and inventory.qty>=#{bo.minQty}
+            </if>
+        </where>
+    </sql>
+
+    <select id="queryWarehouseBoardList" resultMap="inventoryVoMap">
+        <include refid="selectVoListByBo"/>
+        <if test="skuIds != null and !skuIds.isEmpty()">
+            and sku.id in
+            <foreach collection="skuIds" item="id" open="(" separator="," close=")">
+                #{id}
+            </foreach>
+        </if>
+        order by inventory.warehouse_id, sku.goods_id, sku.id
+    </select>
+
+    <select id="queryGoodsBoardList" resultMap="inventoryVoMap">
+        <include refid="selectVoListByBo"/>
+        order by sku.goods_id,sku.id,inventory.warehouse_id
+    </select>
+</mapper>

@@ -1,0 +1,62 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.ruoyi.erp.warehouse.mapper.InventoryHistoryMapper">
+
+    <resultMap id="inventoryHistoryVoMap" type="com.ruoyi.erp.warehouse.domain.vo.InventoryHistoryVo">
+        <association property="sku" javaType="com.ruoyi.erp.basic.domain.vo.SkuVo">
+            <id property="id" column="sku_id"/> <!-- 映射 sku 的 id -->
+        </association>
+        <association property="goods" javaType="com.ruoyi.erp.basic.domain.vo.GoodsVo">
+            <id property="id" column="goods_id"/> <!-- 映射 goods 的 id -->
+        </association>
+    </resultMap>
+
+    <select id="selectVoPageByBo" resultMap="inventoryHistoryVoMap">
+        select
+        history.*,
+        sku.id as sku_id,
+        sku.*,
+        goods.id as goods_id,
+        goods.*
+        from wms_inventory_history history
+        left join basic_sku sku on history.sku_id=sku.id
+        left join basic_goods goods on sku.goods_id=goods.id
+        <where>
+            <if test="query.optType != null">
+                history.opt_type=#{query.optType}
+            </if>
+            <choose>
+                <when test="query.summaryType == 1">
+                    and history.qty &gt; 0
+                </when>
+                <when test="query.summaryType == -1">
+                    and history.qty &lt; 0
+                </when>
+            </choose>
+            <if test="query.optNo != null and query.optNo != ''">
+                and history.opt_no=#{query.optNo}
+            </if>
+            <if test="query.goodsName != null and query.goodsName != ''">
+                and goods.goods_name like concat('%', #{query.goodsName}, '%')
+            </if>
+            <if test="query.goodsNo != null and query.goodsNo != ''">
+                and goods.goods_no like concat('%', #{query.goodsNo}, '%')
+            </if>
+            <if test="query.skuName != null and query.skuName != ''">
+                and sku.sku_name like concat('%', #{query.skuName}, '%')
+            </if>
+            <if test="query.skuNo != null and query.skuNo != ''">
+                and sku.sku_no like concat('%', #{query.skuNo}, '%')
+            </if>
+            <if test="query.warehouseId != null">
+                and history.warehouse_id=#{query.warehouseId}
+            </if>
+            <if test="query.startTime != null and query.startTime != '' and query.endTime != null and query.endTime != ''">
+                and (history.create_time between #{query.startTime} and #{query.endTime})
+            </if>
+        </where>
+        order by history.create_time desc
+    </select>
+</mapper>

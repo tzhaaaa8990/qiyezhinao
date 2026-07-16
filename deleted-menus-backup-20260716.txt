@@ -1,0 +1,7 @@
+﻿menu_id	menu_name	parent_id	order_num	path	component	query_param	is_frame	is_cache	menu_type	visible	status	perms	icon	create_by	create_time	update_by	update_time	remark
+2000	AI鑾峰?绯荤粺	0	5	ai-kit	NULL	NULL	1	0	M	1	1		ai-kit	admin	2026-07-16 14:27:54		NULL	
+2001	鐭ヨ瘑搴撶?鐞	0	6	rag-knowledge	rag/knowledge/index	NULL	1	0	C	1	1	ai:rag:list	document	admin	2026-07-16 14:27:54		NULL	
+2005	AI经营分析	2000	20	ai-chat	ai/analysis/index	NULL	1	0	C	1	1	ai:chat	chat-dot-round	admin	2026-07-16 16:39:50		NULL	
+2010	浼佷笟寰?俊閰嶇疆	2000	10	wechat-config	wechat/config/index	NULL	1	0	C	1	1	ai:wechat:config	chat-line-square	admin	2026-07-16 15:10:42		NULL	
+2011	AI鎵樼?璁剧疆	2000	5	wechat-hosting	wechat/hosting/index	NULL	1	0	C	1	1	ai:wechat:hosting	monitor	admin	2026-07-16 15:16:32		NULL	
+2012	瀹㈡埛瀵煎叆	2000	2	wechat-customer	wechat/customer/index	NULL	1	0	C	1	1	ai:wechat:customer	user	admin	2026-07-16 15:22:01		NULL	
