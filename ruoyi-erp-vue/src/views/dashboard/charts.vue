@@ -147,6 +147,7 @@ const lineDataThree = ref({ xData: [], yData: [] })
 const lineDataFour = ref({ xData: [], yData: [] })
 
 /** 7日趋势数据转图表格式 */
+function pad(n) { return n < 10 ? '0' + n : '' + n }
 function fill7Day(refData, apiData) {
   const xData = [], yData = []
   for (let i = 6; i >= 0; i--) {
@@ -164,8 +165,13 @@ function loadData() {
   request({ url: '/dashboard/overview', method: 'get' }).then(res => {
     overview.value = res.data
     // 默认显示本月按日
+    // 补全本月每天(1号~今天),无数据=0
     const daily = res.data.dailySales || []
-    barChartData.value = { xData: daily.map(r => r.day.slice(8)), yData: daily.map(r => r.amount) }
+    const dailyMap = {}; daily.forEach(r => { dailyMap[r.day] = r.amount })
+    const now = new Date(), daysInMonth = new Date(now.getFullYear(), now.getMonth()+1, 0).getDate()
+    const xDays = [], yDays = []
+    for (let d = 1; d <= now.getDate(); d++) { xDays.push(String(d)); yDays.push(dailyMap[`${now.getFullYear()}-${pad(now.getMonth()+1)}-${pad(d)}`] || 0) }
+    barChartData.value = { xData: xDays, yData: yDays }
     barXName.value = '日'
     fill7Day(lineDataOne, res.data.sales7d)
     fill7Day(lineDataTwo, res.data.purchase7d)
@@ -177,12 +183,22 @@ function loadData() {
 // 时间类型切换:本月=按日,今年=按月
 function dateChange(value) {
   if (value === 'year') {
+    // 补全1-12月,无数据=0
     const months = overview.value.monthlySales || []
-    barChartData.value = { xData: months.map(r => r.month.slice(5)), yData: months.map(r => r.amount) }
+    const monthMap = {}; months.forEach(r => { monthMap[r.month] = r.amount })
+    const xMonths = [], yMonths = []
+    for (let m = 1; m <= 12; m++) {
+      const key = `${new Date().getFullYear()}-${pad(m)}`; xMonths.push(pad(m)); yMonths.push(monthMap[key] || 0)
+    }
+    barChartData.value = { xData: xMonths, yData: yMonths }
     barXName.value = '月'
   } else {
     const daily = overview.value.dailySales || []
-    barChartData.value = { xData: daily.map(r => r.day.slice(8)), yData: daily.map(r => r.amount) }
+    const dailyMap = {}; daily.forEach(r => { dailyMap[r.day] = r.amount })
+    const now = new Date()
+    const xDays = [], yDays = []
+    for (let d = 1; d <= now.getDate(); d++) { xDays.push(String(d)); yDays.push(dailyMap[`${now.getFullYear()}-${pad(now.getMonth()+1)}-${pad(d)}`] || 0) }
+    barChartData.value = { xData: xDays, yData: yDays }
     barXName.value = '日'
   }
 }
