@@ -67,7 +67,7 @@
           <el-card class="box-card" shadow="never">
             <div class="card-title">仓库货物占比</div>
             <div style="height: calc(100% - 30px);">
-              <StationPie height="100%" :pieData="overview.warehouseGoods.filter(g=>g.value>0)"></StationPie>
+              <StationPie height="100%" :pieData="overview.warehouseGoods.filter(g=>g.value>0).map(g=>({...g,name:g.name.length>4?g.name.slice(0,4)+'…':g.name}))"></StationPie>
               <div></div>
             </div>
           </el-card>
@@ -163,15 +163,10 @@ function fill7Day(refData, apiData) {
 function loadData() {
   request({ url: '/dashboard/overview', method: 'get' }).then(res => {
     overview.value = res.data
-    // 仓库货物占比传给饼图(StationPie 读 warehouseGoods)
-    // 生产入库趋势: 月度销售金额
-    const salesByMonth = res.data.monthlySales || []
-    barChartData.value = {
-      xData: salesByMonth.map(r => r.month).reverse(),
-      yData: salesByMonth.map(r => r.amount).reverse()
-    }
+    // 默认显示本月按日
+    const daily = res.data.dailySales || []
+    barChartData.value = { xData: daily.map(r => r.day.slice(8)), yData: daily.map(r => r.amount) }
     barXName.value = '日'
-    // 近7日趋势
     fill7Day(lineDataOne, res.data.sales7d)
     fill7Day(lineDataTwo, res.data.purchase7d)
     fill7Day(lineDataThree, res.data.movement7d)
@@ -179,20 +174,16 @@ function loadData() {
   })
 }
 
-// 时间类型选择: 月度-聚合
+// 时间类型切换:本月=按日,今年=按月
 function dateChange(value) {
-  if (value === 'month' || value === 'year') {
-    const sales = overview.value.monthlySales || []
-    const grouped = {}
-    sales.forEach(r => {
-      const key = value === 'year' ? r.month.slice(0, 4) : r.month
-      grouped[key] = (grouped[key] || 0) + r.amount
-    })
-    barChartData.value = {
-      xData: Object.keys(grouped),
-      yData: Object.values(grouped)
-    }
-    barXName.value = value === 'year' ? '月' : '日'
+  if (value === 'year') {
+    const months = overview.value.monthlySales || []
+    barChartData.value = { xData: months.map(r => r.month.slice(5)), yData: months.map(r => r.amount) }
+    barXName.value = '月'
+  } else {
+    const daily = overview.value.dailySales || []
+    barChartData.value = { xData: daily.map(r => r.day.slice(8)), yData: daily.map(r => r.amount) }
+    barXName.value = '日'
   }
 }
 

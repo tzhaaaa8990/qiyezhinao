@@ -89,9 +89,9 @@ function initChart() {
       // top: '80%',
       formatter: (param) => {
         let item = props.pieData.find(c => c.name === param)
-        if(!item) return ''
-        let rate = !totalCount.value ? 0 : item.value / totalCount.value * 100
-        return `{name|${param}}    占比： {percent|${rate.toFixed(1)}%}`
+        if(!item || !totalCount.value) return param
+        let rate = item.value / totalCount.value * 100
+        return isNaN(rate) ? param : `{name|${param}}  {percent|${rate.toFixed(1)}%}`
       },
       itemWidth: 14,
       itemGap: 15,

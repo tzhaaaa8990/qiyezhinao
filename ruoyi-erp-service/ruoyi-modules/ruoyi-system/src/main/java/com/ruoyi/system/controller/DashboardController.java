@@ -80,11 +80,17 @@ public class DashboardController {
             "LEFT JOIN wms_inventory i ON i.warehouse_id=w.id GROUP BY w.id, w.warehouse_name HAVING value > 0");
         data.put("warehouseGoods", warehousePie);
 
-        // ---- 销售额趋势(最近12个月,按月聚合) ----
+        // ---- 销售额趋势(本月按日 + 本年按月) ----
+        List<Map<String, Object>> dailySales = jdbc.queryForList(
+            "SELECT DATE_FORMAT(doc_date, '%Y-%m-%d') AS day, SUM(actual_amount) AS amount FROM sales_order " +
+            "WHERE checked_status=1 AND doc_date >= DATE_FORMAT(CURDATE(),'%Y-%m-01') " +
+            "GROUP BY DATE_FORMAT(doc_date, '%Y-%m-%d') ORDER BY day");
+        data.put("dailySales", dailySales);
+
         List<Map<String, Object>> monthlySales = jdbc.queryForList(
             "SELECT DATE_FORMAT(doc_date, '%Y-%m') AS month, SUM(actual_amount) AS amount FROM sales_order " +
-            "WHERE checked_status=1 " +
-            "GROUP BY DATE_FORMAT(doc_date, '%Y-%m') ORDER BY month DESC LIMIT 12");
+            "WHERE checked_status=1 AND doc_date >= DATE_FORMAT(DATE_SUB(CURDATE(), INTERVAL 12 MONTH), '%Y-01') " +
+            "GROUP BY DATE_FORMAT(doc_date, '%Y-%m') ORDER BY month");
         data.put("monthlySales", monthlySales);
 
         // ---- 库存预警详细(SKU qty<10) ----
