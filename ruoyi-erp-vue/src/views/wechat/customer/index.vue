@@ -19,6 +19,12 @@
         <el-table-column label="手机" prop="mobile" width="130" />
         <el-table-column label="邮箱" prop="email" />
         <el-table-column label="地址" prop="address" show-overflow-tooltip />
+        <el-table-column label="同步" width="120" align="center">
+          <template #default="scope">
+            <el-tag v-if="scope.row.synced==='1'" type="success" size="small">已同步</el-tag>
+            <el-button v-else type="primary" size="small" link @click="handleSync([scope.row.id])">同步到ERP</el-button>
+          </template>
+        </el-table-column>
         <el-table-column label="添加时间" prop="add_time" width="180" />
       </el-table>
     </el-card>
@@ -26,7 +32,7 @@
 </template>
 
 <script setup name="WechatCustomer">
-import { fetchCustomers, listCustomer } from "@/api/wechat";
+import { fetchCustomers, listCustomer, syncCustomer } from "@/api/wechat";
 
 const { proxy } = getCurrentInstance();
 
@@ -52,6 +58,14 @@ function handleFetch() {
     getList();
   }).finally(() => {
     fetchLoading.value = false;
+  });
+}
+
+/** 同步到ERP */
+function handleSync(ids) {
+  syncCustomer(ids).then(res => {
+    proxy.$modal.msgSuccess(res.data || res.msg || "同步成功");
+    getList();
   });
 }
 

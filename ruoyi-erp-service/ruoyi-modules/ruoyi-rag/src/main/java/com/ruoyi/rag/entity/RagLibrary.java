@@ -11,7 +11,10 @@ public class RagLibrary {
     private String name;
     private String description;
     private Integer chunkSize;   // 默认分段长度(字符)
+    private Integer overlapSize; // 相邻分段重叠字符数(0=不重叠)
     private String separator;    // 默认分段标识符
+    private Integer topK;        // 召回分段数
+    private Float scoreThreshold; // 相似度阈值(0-1),低于不召回
     private String createBy;
     private String createTime;
     private String updateTime;

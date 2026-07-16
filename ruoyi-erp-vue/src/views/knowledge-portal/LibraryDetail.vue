@@ -81,6 +81,10 @@
             <el-form-item label="默认分段长度">
               <el-input-number v-model="settingForm.chunkSize" :min="100" :max="2000" :step="100" />
             </el-form-item>
+            <el-form-item label="分段重叠">
+              <el-input-number v-model="settingForm.overlapSize" :min="0" :max="300" :step="10" />
+              <span class="tip">相邻分段共享字符数(Excel/Markdown/文本通用,0=不重叠)</span>
+            </el-form-item>
             <el-form-item label="默认分段标识">
               <el-select v-model="settingForm.separator" style="width: 200px">
                 <el-option label="空行(\n\n)" value="\n\n" />
@@ -88,6 +92,16 @@
                 <el-option label="井号标题(#)" value="#" />
                 <el-option label="分隔线(---)" value="---" />
               </el-select>
+            </el-form-item>
+            <el-form-item label="召回数量">
+              <el-input-number v-model="settingForm.topK" :min="1" :max="20" />
+              <span class="tip">AI 回复时最多引用的分段数</span>
+            </el-form-item>
+            <el-form-item label="相似度阈值">
+              <el-slider v-model="settingForm.scoreThreshold" :min="0" :max="1" :step="0.05" show-input :show-input-controls="false" style="width: 360px" />
+            </el-form-item>
+            <el-form-item>
+              <span class="tip">相似度低于阈值的分段不会被召回；0 表示不过滤。命中测试同样生效。</span>
             </el-form-item>
             <el-form-item>
               <el-button type="primary" :loading="settingSaving" @click="saveSettings">保存</el-button>
@@ -127,6 +141,9 @@
         <el-form :inline="true" class="mt10">
           <el-form-item label="分段长度">
             <el-input-number v-model="wizardParams.chunkSize" :min="100" :max="2000" :step="100" />
+          </el-form-item>
+          <el-form-item label="重叠字符">
+            <el-input-number v-model="wizardParams.overlap" :min="0" :max="300" :step="10" />
           </el-form-item>
           <el-form-item label="分段标识">
             <el-select v-model="wizardParams.separator" style="width: 160px">
@@ -218,7 +235,7 @@ const docLoading = ref(false)
 const wizardOpen = ref(false)
 const wizardStep = ref(0)
 const wizardFile = ref(null)
-const wizardParams = reactive({ chunkSize: props.library.chunkSize || 500, separator: props.library.separator || '\\n\\n', clean: true })
+const wizardParams = reactive({ chunkSize: props.library.chunkSize || 500, overlap: props.library.overlapSize ?? 50, separator: props.library.separator || '\\n\\n', clean: true })
 const previewList = ref([])
 const previewLoading = ref(false)
 const importing = ref(false)
@@ -232,7 +249,7 @@ const hitLoading = ref(false)
 const hitTested = ref(false)
 
 // 设置
-const settingForm = reactive({ ...props.library })
+const settingForm = reactive({ topK: 3, scoreThreshold: 0, overlapSize: 50, ...props.library })
 const settingSaving = ref(false)
 const rebuilding = ref(false)
 
@@ -268,6 +285,7 @@ function buildFormData() {
   const fd = new FormData()
   fd.append('file', wizardFile.value)
   fd.append('chunkSize', wizardParams.chunkSize)
+  fd.append('overlap', wizardParams.overlap)
   fd.append('separator', wizardParams.separator)
   fd.append('clean', wizardParams.clean)
   return fd

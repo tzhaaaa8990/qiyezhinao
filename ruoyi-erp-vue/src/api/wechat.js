@@ -53,6 +53,14 @@ export function listCustomer() {
   })
 }
 
+export function syncCustomer(ids) {
+  return request({
+    url: '/wechat/customer/sync',
+    method: 'post',
+    data: ids
+  })
+}
+
 // ========== AI 托管 ==========
 export function listHosting() {
   return request({

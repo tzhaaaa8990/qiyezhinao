@@ -158,7 +158,7 @@ public class WechatHostingService {
         try {
             String url = "http://localhost:8080/rag/search?keyword="
                 + java.net.URLEncoder.encode(query, StandardCharsets.UTF_8)
-                + "&topK=3&libraryId=" + libraryId;
+                + "&libraryId=" + libraryId; // 召回数量/阈值由库配置决定
             HttpRequest req = HttpRequest.newBuilder().uri(URI.create(url)).GET().build();
             HttpResponse<String> resp = http.send(req, HttpResponse.BodyHandlers.ofString());
             if (resp.statusCode() != 200) return null;

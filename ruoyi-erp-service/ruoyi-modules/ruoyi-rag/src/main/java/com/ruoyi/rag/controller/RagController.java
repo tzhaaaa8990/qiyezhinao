@@ -73,9 +73,10 @@ public class RagController {
     public R<List<RagChunk>> preview(@RequestParam("file") MultipartFile file,
                                       @RequestParam(value = "chunkSize", defaultValue = "500") int chunkSize,
                                       @RequestParam(value = "separator", defaultValue = "\\n\\n") String separator,
-                                      @RequestParam(value = "clean", defaultValue = "true") boolean clean) {
+                                      @RequestParam(value = "clean", defaultValue = "true") boolean clean,
+                                      @RequestParam(value = "overlap", defaultValue = "50") int overlap) {
         try {
-            return R.ok(ragService.preview(file, chunkSize, separator, clean));
+            return R.ok(ragService.preview(file, chunkSize, separator, clean, overlap));
         } catch (Exception e) {
             return R.fail("预览失败：" + e.getMessage());
         }
@@ -89,9 +90,10 @@ public class RagController {
                                   @RequestParam(value = "libraryId", defaultValue = "1") Long libraryId,
                                   @RequestParam(value = "chunkSize", defaultValue = "500") int chunkSize,
                                   @RequestParam(value = "separator", defaultValue = "\\n\\n") String separator,
-                                  @RequestParam(value = "clean", defaultValue = "true") boolean clean) {
+                                  @RequestParam(value = "clean", defaultValue = "true") boolean clean,
+                                  @RequestParam(value = "overlap", defaultValue = "50") int overlap) {
         try {
-            RagDocument doc = ragService.upload(file, libraryId, chunkSize, separator, clean, "admin");
+            RagDocument doc = ragService.upload(file, libraryId, chunkSize, separator, clean, overlap, "admin");
             return R.ok(doc);
         } catch (Exception e) {
             return R.fail("上传失败：" + e.getMessage());

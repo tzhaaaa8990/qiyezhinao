@@ -50,6 +50,10 @@
           <el-input-number v-model="form.chunkSize" :min="100" :max="2000" :step="100" />
           <span class="tip">默认分段长度(字符)</span>
         </el-form-item>
+        <el-form-item label="分段重叠">
+          <el-input-number v-model="form.overlapSize" :min="0" :max="300" :step="10" />
+          <span class="tip">相邻分段共享字符数,0=不重叠(建议50)</span>
+        </el-form-item>
         <el-form-item label="分段标识">
           <el-select v-model="form.separator" style="width: 200px">
             <el-option label="空行(\n\n)" value="\n\n" />
@@ -95,7 +99,7 @@ function getList() {
 }
 
 function handleCreate() {
-  form.value = { id: null, name: '', description: '', chunkSize: 500, separator: '\\n\\n' }
+  form.value = { id: null, name: '', description: '', chunkSize: 500, overlapSize: 50, separator: '\\n\\n' }
   title.value = '创建知识库'
   open.value = true
 }

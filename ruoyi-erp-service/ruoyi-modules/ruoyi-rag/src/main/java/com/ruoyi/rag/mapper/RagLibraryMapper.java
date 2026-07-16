@@ -17,12 +17,13 @@ public interface RagLibraryMapper {
     @Select("SELECT * FROM rag_library WHERE id=#{id}")
     RagLibrary getById(Long id);
 
-    @Insert("INSERT INTO rag_library(name,description,chunk_size,separator,create_by) " +
-            "VALUES(#{name},#{description},#{chunkSize},#{separator},#{createBy})")
+    @Insert("INSERT INTO rag_library(name,description,chunk_size,overlap_size,`separator`,top_k,score_threshold,create_by) " +
+            "VALUES(#{name},#{description},#{chunkSize},#{overlapSize},#{separator},#{topK},#{scoreThreshold},#{createBy})")
     @Options(useGeneratedKeys = true, keyProperty = "id")
     int insert(RagLibrary library);
 
-    @Update("UPDATE rag_library SET name=#{name},description=#{description},chunk_size=#{chunkSize},separator=#{separator} WHERE id=#{id}")
+    @Update("UPDATE rag_library SET name=#{name},description=#{description},chunk_size=#{chunkSize}," +
+            "overlap_size=#{overlapSize},`separator`=#{separator},top_k=#{topK},score_threshold=#{scoreThreshold} WHERE id=#{id}")
     int update(RagLibrary library);
 
     @Delete("DELETE FROM rag_library WHERE id=#{id}")

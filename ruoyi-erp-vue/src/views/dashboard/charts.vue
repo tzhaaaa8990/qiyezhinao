@@ -6,14 +6,14 @@
           <div class="top-item-box item-box-one" style="display: flex;">
             <div style="flex:2;height:100%;">
               <div>入库</div>
-              <div style="text-align:center;margin-top:30px;"><span style="font-size:26px;font-weight:bold;">33</span>
+              <div style="text-align:center;margin-top:30px;"><span style="font-size:26px;font-weight:bold;">{{ overview.inbound.total }}</span>
               </div>
             </div>
             <div style="flex:3;display: flex;flex-direction:column;justify-content:space-evenly">
-              <div>待入库：15</div>
-              <div>待质检：15</div>
-              <div>待上架：2</div>
-              <div>待完成：1 </div>
+              <div>待入库：{{ overview.inbound.pendingReceipt }}</div>
+              <div>供应商：{{ overview.inbound.supplierCount }}</div>
+              <div>本月采购：¥{{ overview.inbound.monthPurchase }}</div>
+              <div>待完成：{{ overview.inbound.pendingFinish }}</div>
             </div>
           </div>
         </el-col>
@@ -22,13 +22,13 @@
             <div style="flex:2;height:100%;">
               <div>出库</div>
               <div style="text-align:center;margin-top:30px;"><span style="font-size:26px;font-weight:bold;"
-              >20</span></div>
+              >{{ overview.outbound.total }}</span></div>
             </div>
             <div style="flex:3;display: flex;flex-direction:column;justify-content:space-evenly">
-              <div>待配货：5</div>
-              <div>待波次：5</div>
-              <div>待拣货：5</div>
-              <div>待出库：5</div>
+              <div>待出库：{{ overview.outbound.pendingShip }}</div>
+              <div>客户数：{{ overview.outbound.customerCount }}</div>
+              <div>本月订单：{{ overview.outbound.pendingSort }}</div>
+              <div>本月销售：¥{{ overview.outbound.monthSales }}</div>
             </div>
           </div>
         </el-col>
@@ -36,13 +36,12 @@
           <div class="top-item-box item-box-three" style="display: flex;">
             <div style="flex:2;height:100%;">
               <div>其他</div>
-              <div style="text-align:center;margin-top:30px;"><span style="font-size:26px;font-weight:bold;"
-              >15</span></div>
+              <div style="text-align:center;margin-top:30px;"><span style="font-size:26px;font-weight:bold;">{{ overview.other.pendingCheck }}</span></div>
             </div>
             <div style="flex:3;display: flex;flex-direction:column;justify-content:space-evenly">
-              <div>待截单：5</div>
-              <div>异常单：5</div>
-              <div>今日到货：5</div>
+              <div>待审核：{{ overview.other.pendingCheck }}</div>
+              <div>商品种类：{{ overview.other.goodsVariety }}</div>
+              <div>今日到货：{{ overview.other.todayArrival }}</div>
             </div>
           </div>
         </el-col>
@@ -50,13 +49,13 @@
           <div class="top-item-box item-box-four" style="display: flex;">
             <div style="flex:2;height:100%;">
               <div>库存预警</div>
-              <div style="text-align:center;margin-top:30px;"><span style="font-size:26px;font-weight:bold;">5</span>
-              </div>
+              <div style="text-align:center;margin-top:30px;"><span style="font-size:26px;font-weight:bold;"
+              >{{ overview.other.lowStock }}</span></div>
             </div>
             <div style="flex:3;display: flex;flex-direction:column;justify-content:space-evenly">
-              <div>松陵仓：1</div>
-              <div>盛泽仓：2</div>
-              <div>园区仓：2</div>
+              <div>仓库数：{{ overview.warehouseCount }}</div>
+              <div>商品种类：{{ overview.goodsVariety }}</div>
+              <div>库存总量：{{ overview.totalQty }}</div>
             </div>
           </div>
         </el-col>
@@ -68,7 +67,7 @@
           <el-card class="box-card" shadow="never">
             <div class="card-title">仓库货物占比</div>
             <div style="height: calc(100% - 30px);">
-              <StationPie height="100%"></StationPie>
+              <StationPie height="100%" :pieData="overview.warehouseGoods"></StationPie>
               <div></div>
             </div>
           </el-card>
@@ -102,7 +101,7 @@
         </el-col>
         <el-col :span="6">
           <el-card class="box-card" shadow="never">
-            <div class="card-title">近7日领料出库</div>
+            <div class="card-title">近7日采购入库</div>
             <div style="height: calc(100% - 30px);">
               <StationLine height="100%" :chartData="lineDataTwo" yName="件" itemColor="#5470c6"/>
             </div>
@@ -137,72 +136,71 @@ import StationPie from './components/StationPie.vue'
 import StationLine from './components/StationLine.vue'
 import StationBar from './components/StationBar.vue'
 import { onMounted, ref } from 'vue'
-import moment from 'moment';
+import request from '@/utils/request'
 
 const tabPosition = ref('month')
-const barChartData = ref({
-  yData: [79, 68, 56, 72, 51, 63, 67, 71, 58, 81, 64, 77, 56, 69]
-})
+const barChartData = ref({ yData: [] })
 const barXName = ref('日')
-const lineDataOne = ref({
-  yData: [79, 65, 21, 67, 21, 89, 56],
+const overview = ref({
+  inbound: {}, outbound: {}, other: { pendingCheck: 0, abnormal: 0, todayArrival: 0, lowStock: 0 },
+  warehouseGoods: [], monthlySales: [], sales7d: [], purchase7d: [], movement7d: [], refund7d: []
 })
-const lineDataTwo = ref({
-  yData: [45, 72, 16, 37, 64, 28, 46],
-})
-const lineDataThree = ref(
-  {
-    yData: [16, 27, 37, 16, 27, 21, 11],
+const lineDataOne = ref({ xData: [], yData: [] })
+const lineDataTwo = ref({ xData: [], yData: [] })
+const lineDataThree = ref({ xData: [], yData: [] })
+const lineDataFour = ref({ xData: [], yData: [] })
+
+/** 7日趋势数据转图表格式 */
+function fill7Day(refData, apiData) {
+  const xData = [], yData = []
+  for (let i = 6; i >= 0; i--) {
+    const d = new Date(); d.setDate(d.getDate() - i)
+    const day = d.toISOString().slice(5, 10)
+    xData.push(day)
+    const row = (apiData || []).find(r => r.day === d.toISOString().slice(0, 10))
+    yData.push(row ? row.count || 0 : 0)
   }
-)
-const lineDataFour = ref({
-  yData: [134, 107, 94, 173, 37, 143, 86],
-})
+  refData.xData = xData
+  refData.yData = yData
+}
 
-onMounted((()=>{
-  initTime();
-  dateChange('month');
-}))
-
-// 时间类型选择
-function dateChange(value) {
-  let date = new Date()
-  let month = date.getMonth() + 1
-  let day = date.getDate()
-  let barXData = []
-  let barYData = []
-  if(value === 'year') {
-    for(let i = 0; i < month; i++) {
-      barXData.push(moment().subtract(i, 'months').format('YYYY-MM'))
-      barYData.push(Math.floor(Math.random()*(180-120+1))+120)
-    }
-    barXName.value = '月'
-  } else {
-    for(let i = 0; i < day; i++) {
-      barXData.push(moment().subtract(i, 'days').format('MM-DD'))
-      barYData.push(Math.floor(Math.random()*(30-15+1))+15)
+function loadData() {
+  request({ url: '/dashboard/overview', method: 'get' }).then(res => {
+    overview.value = res.data
+    // 仓库货物占比传给饼图(StationPie 读 warehouseGoods)
+    // 生产入库趋势: 月度销售金额
+    const salesByMonth = res.data.monthlySales || []
+    barChartData.value = {
+      xData: salesByMonth.map(r => r.month).reverse(),
+      yData: salesByMonth.map(r => r.amount).reverse()
     }
     barXName.value = '日'
-  }
-  barChartData.value = {
-    xData: barXData.reverse(),
-    yData: barYData
-  }
-}
-// 初始化时间模拟数据
-function initTime() {
-  let lineXData = []
-  for(let i = 0; i < 7; i++) {
-    lineXData.push(moment().subtract(i, 'days').format('MM-DD'))
-  }
-  lineXData = lineXData.reverse()
-  lineDataOne.value.xData = lineXData
-  lineDataTwo.value.xData = lineXData
-  lineDataThree.value.xData = lineXData
-  lineDataFour.value.xData = lineXData
+    // 近7日趋势
+    fill7Day(lineDataOne, res.data.sales7d)
+    fill7Day(lineDataTwo, res.data.purchase7d)
+    fill7Day(lineDataThree, res.data.movement7d)
+    fill7Day(lineDataFour, res.data.refund7d)
+  })
 }
 
+// 时间类型选择: 月度-聚合
+function dateChange(value) {
+  if (value === 'month' || value === 'year') {
+    const sales = overview.value.monthlySales || []
+    const grouped = {}
+    sales.forEach(r => {
+      const key = value === 'year' ? r.month.slice(0, 4) : r.month
+      grouped[key] = (grouped[key] || 0) + r.amount
+    })
+    barChartData.value = {
+      xData: Object.keys(grouped),
+      yData: Object.values(grouped)
+    }
+    barXName.value = value === 'year' ? '月' : '日'
+  }
+}
 
+onMounted(() => { loadData() })
 </script>
 
 

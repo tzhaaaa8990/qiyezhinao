@@ -39,7 +39,8 @@ export function previewChunks(formData) {
     url: '/rag/document/preview',
     method: 'post',
     data: formData,
-    headers: { 'Content-Type': 'multipart/form-data' }
+    headers: { 'Content-Type': 'multipart/form-data' },
+    timeout: 120000
   })
 }
 

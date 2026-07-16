@@ -7,11 +7,10 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.web.bind.annotation.*;
 
-import java.time.LocalDateTime;
 import java.util.*;
 
 /**
- * 企微客户导入 —— 接真实 externalcontact API
+ * 企微联系人导入：外部客户 + 内部员工
  */
 @Slf4j
 @RestController
@@ -23,112 +22,137 @@ public class WechatCustomerController {
     private final JdbcTemplate jdbc;
 
     /**
-     * 从企微拉取客户列表（真实API）
-     * 流程：获取成员列表 → 逐个获取外部联系人 → 存wechat_customer表
+     * 一键拉取：先拉外部客户，再拉内部成员，全部存 wechat_customer 表
      */
     @GetMapping("/fetch")
     public R<String> fetch() {
-        try {
-            String accessToken = wechatService.getAccessToken();
-            if (accessToken == null) return R.fail("未配置企微或连接失败");
+        String accessToken = wechatService.getAccessToken();
+        if (accessToken == null) return R.fail("未配置企微或连接失败");
 
-            // 1. 获取部门成员（需要先用通讯录API，这里简化：直接调客户列表）
-            // 实际中需先调 /cgi-bin/department/simplelist → /cgi-bin/user/simplelist
-            // 再对每个成员调 externalcontact/list
+        List<String> userIds = wechatService.getAllUserIds();
+        if (userIds.isEmpty()) return R.fail("未获取到企业成员，请检查通讯录权限");
 
-            int count = 0;
-            // TODO: 替换为真实成员列表
-            String[] userIds = {"admin"}; // 示例：从通讯录获取的实际成员ID
-            for (String uid : userIds) {
-                String listJson = wechatService.getExternalContactList(uid);
-                if (listJson.contains("\"external_userid\"")) {
-                    // 解析 external_userid 列表
-                    String[] ids = extractExternalUserIds(listJson);
-                    for (String eid : ids) {
-                        String detail = wechatService.getExternalContactDetail(eid);
-                        if (!detail.contains("\"errcode\"")) {
-                            saveOrUpdateCustomer(detail);
-                            count++;
-                        }
+        int extCount = 0, intCount = 0;
+        log.info("拉取联系人：{} 个成员", userIds.size());
+
+        for (String uid : userIds) {
+            // 1. 拉该成员的客户（外部联系人）
+            String listJson = wechatService.getExternalContactList(uid);
+            if (listJson.contains("\"external_userid\"")) {
+                for (String eid : extractValues(listJson, "external_userid")) {
+                    String detail = wechatService.getExternalContactDetail(eid);
+                    if (!detail.contains("\"errcode\"")) {
+                        saveCustomerFromExternal(detail, uid);
+                        extCount++;
                     }
                 }
             }
-            return R.ok("已拉取 " + count + " 个客户");
-        } catch (Exception e) {
-            log.error("拉取客户失败", e);
-            return R.fail("拉取失败: " + e.getMessage());
+            // 2. 拉该成员本身的详细信息（内部员工）
+            String userJson = wechatService.getUserDetail(uid);
+            if (!userJson.contains("\"errcode\"")) {
+                saveEmployee(userJson);
+                intCount++;
+            }
         }
+        return R.ok(String.format("已拉取：%d 个外部客户 + %d 个内部员工", extCount, intCount));
     }
 
-    /**
-     * 客户列表
-     */
     @GetMapping("/list")
     public R<List<Map<String, Object>>> list() {
         return R.ok(jdbc.queryForList(
             "SELECT c.*, m.merchant_name AS erpName FROM wechat_customer c " +
-            "LEFT JOIN basic_merchant m ON c.erp_merchant_id=m.id ORDER BY c.create_time DESC"));
+            "LEFT JOIN basic_merchant m ON c.erp_merchant_id=m.id ORDER BY c.type, c.create_time DESC"));
     }
 
-    /**
-     * 同步选中客户到 ERP 往来单位
-     */
+    /** 同步选中到 ERP 往来单位 */
     @PostMapping("/sync")
     public R<String> sync(@RequestBody List<Long> ids) {
         int count = 0;
         for (Long id : ids) {
-            List<Map<String, Object>> rows = jdbc.queryForList(
-                "SELECT * FROM wechat_customer WHERE id=?", id);
+            List<Map<String, Object>> rows = jdbc.queryForList("SELECT * FROM wechat_customer WHERE id=?", id);
             if (rows.isEmpty()) continue;
             Map<String, Object> c = rows.get(0);
-            String merchantNo = "WX" + c.get("external_userid").toString()
-                .substring(0, Math.min(12, c.get("external_userid").toString().length()));
+            String prefix = "1".equals(c.get("type").toString()) ? "WX" : "WXEMP";
+            String merchantName = c.get("name").toString();
+            if ("1".equals(c.get("type").toString())) {
+                merchantName = merchantName + "（个人）";
+            }
+            String merchantNo = prefix + c.get("external_userid").toString().substring(0, Math.min(12, c.get("external_userid").toString().length()));
             jdbc.update(
                 "INSERT INTO basic_merchant(merchant_no,merchant_name,merchant_type_customer," +
-                "mobile,email,address,contact_person,remark,create_time) " +
-                "VALUES(?,?,1,?,?,?,?,?,NOW())",
-                merchantNo, c.get("name"), c.get("mobile"),
-                c.get("email"), c.get("address"), c.get("name"), c.get("corp_name"));
+                "mobile,email,address,contact_person,remark,create_time) VALUES(?,?,1,?,?,?,?,?,NOW())",
+                merchantNo, merchantName, c.get("mobile"),
+                c.get("email"), c.get("address"), merchantName, c.get("corp_name"));
             Long merchantId = jdbc.queryForObject("SELECT LAST_INSERT_ID()", Long.class);
             jdbc.update("UPDATE wechat_customer SET erp_merchant_id=?,synced='1' WHERE id=?", merchantId, id);
             count++;
         }
-        return R.ok("已同步 " + count + " 个客户到 ERP");
+        return R.ok("已同步 " + count + " 个到 ERP");
     }
 
-    private String[] extractExternalUserIds(String json) {
-        List<String> ids = new ArrayList<>();
-        int idx = 0;
-        while ((idx = json.indexOf("\"external_userid\":\"", idx)) >= 0) {
-            idx += 19;
-            int end = json.indexOf("\"", idx);
-            if (end < 0) break;
-            ids.add(json.substring(idx, end));
-            idx = end;
-        }
-        return ids.toArray(new String[0]);
+    // ── 存储逻辑 ──
+
+    private void saveCustomerFromExternal(String detailJson, String addByUserId) {
+        saveContact(
+            extractValue(detailJson, "external_userid"),
+            extractNestedValue(detailJson, "external_contact", "name"),
+            1, // 外部客户
+            extractNestedValue(detailJson, "external_contact", "corp_name"),
+            extractNestedValue(detailJson, "external_contact", "mobile"),
+            extractNestedValue(detailJson, "external_contact", "email"),
+            extractNestedValue(detailJson, "external_contact", "address"),
+            addByUserId
+        );
     }
 
-    private void saveOrUpdateCustomer(String detailJson) {
-        String eid = extractValue(detailJson, "external_userid");
-        String name = extractValue(detailJson, "name");
-        String type = extractNestedValue(detailJson, "external_contact", "type");
-        String corp = extractNestedValue(detailJson, "external_contact", "corp_name");
-        String mobile = extractNestedValue(detailJson, "external_contact", "mobile");
-        String email = extractNestedValue(detailJson, "external_contact", "email");
-        String address = extractNestedValue(detailJson, "external_contact", "address");
+    private void saveEmployee(String userJson) {
+        saveContact(
+            extractValue(userJson, "userid"),
+            extractValue(userJson, "name"),
+            3, // 内部员工
+            extractValue(userJson, "department"), // 存部门名
+            extractValue(userJson, "mobile"),
+            extractValue(userJson, "email"),
+            extractNestedValue(userJson, "extattr", "address"),
+            null
+        );
+    }
 
+    private void saveContact(String externalId, String name, int type, String corp,
+                              String mobile, String email, String address, String addBy) {
+        if (name == null) name = "未知";
         jdbc.update(
             "INSERT INTO wechat_customer(external_userid,name,type,corp_name,mobile,email,address,add_time) " +
             "VALUES(?,?,?,?,?,?,?,NOW()) ON DUPLICATE KEY UPDATE " +
-            "name=VALUES(name),mobile=VALUES(mobile),email=VALUES(email)",
-            eid, name != null ? name : "未知", type != null ? Integer.parseInt(type) : 1,
-            corp, mobile, email, address);
+            "name=VALUES(name),mobile=VALUES(mobile),email=VALUES(email),corp_name=VALUES(corp_name)",
+            externalId, name, type, corp, mobile, email, address);
+    }
+
+    // ── JSON 工具 ──
+
+    private String[] extractValues(String json, String key) {
+        List<String> list = new ArrayList<>();
+        String prefix = "\"" + key + "\":\"";
+        int idx = 0;
+        while ((idx = json.indexOf(prefix, idx)) >= 0) {
+            idx += prefix.length();
+            int end = json.indexOf("\"", idx);
+            if (end > idx) list.add(json.substring(idx, end));
+            idx = end;
+        }
+        return list.toArray(new String[0]);
     }
 
     private String extractValue(String json, String key) {
         int idx = json.indexOf("\"" + key + "\":\"");
-        if (idx < 0) return null;
+        if (idx < 0) {
+            // 嵌套: "key": {
+            idx = json.indexOf("\"" + key + "\":");
+            if (idx < 0) return null;
+            idx += key.length() + 3;
+            if (idx < json.length() && json.charAt(idx) == '\"') { idx++; int e = json.indexOf("\"", idx); return e > idx ? json.substring(idx, e) : null; }
+            return null;
+        }
         idx += key.length() + 4;
         int end = json.indexOf("\"", idx);
         return end > idx ? json.substring(idx, end) : null;

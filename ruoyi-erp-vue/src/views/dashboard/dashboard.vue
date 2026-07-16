@@ -10,67 +10,63 @@
           <div class="box-title">库存总览</div>
           <div class="box-content flex-between">
             <div class="overview-object flex-column-center">
-              <div class="object-count">5</div>
+              <div class="object-count">{{ overview.warehouseCount }}</div>
               <div class="object-name">仓库总数</div>
             </div>
             <div class="overview-meter flex-column-center">
-              <div class="object-count">981</div>
-              <div class="object-name">库位总数</div>
+              <div class="object-count">{{ overview.goodsVariety }}</div>
+              <div class="object-name">在售SKU</div>
             </div>
             <div class="overview-alarm flex-column-center">
-              <div class="object-count">4</div>
-              <div class="object-name">异常库位</div>
+              <div class="object-count">{{ overview.other.lowStock }}</div>
+              <div class="object-name">库存预警</div>
             </div>
           </div>
         </div>
         <div class="content-status">
-          <div class="box-title">监控设备状态</div>
+          <div class="box-title">仓库货物占比</div>
           <div class="box-content">
             <CirclePieChart height="100%" :pieData="pieData"/>
           </div>
         </div>
         <div class="content-alarm">
-          <div class="box-title">报警信息</div>
+          <div class="box-title">库存总览</div>
           <div class="box-content">
-            <alarmInfo/>
+            <div style="padding:8px;color:#fff;line-height:2.2">
+              <div>仓库数量：<b>{{ overview.warehouseCount }}</b> 个</div>
+              <div>在售SKU：<b>{{ overview.goodsVariety }}</b> 种</div>
+              <div>库存总量：<b>{{ overview.totalQty }}</b> 件</div>
+              <div>库存预警：<b style="color:#e0c464">{{ overview.other.lowStock }}</b> 项</div>
+            </div>
           </div>
         </div>
       </div>
       <div class="content-middle flex-column-between">
         <div class="content-map" id="boardMap"></div>
         <div class="content-chart">
-          <div class="box-title">今日仓库耗能</div>
+          <div class="box-title">近30日销售趋势</div>
           <div class="box-content">
             <el-tabs
               v-model="activeName"
               @tab-click="handleClick"
               class="trend-tabs"
             >
-              <el-tab-pane label="综合能耗" name="total">
+              <el-tab-pane label="销售额" name="total">
                 <TrendLineChart
                   v-if="activeName === 'total'"
                   :height="'100%'"
-                  :yName="'kgce'"
+                  :yName="'元'"
                   :xData="xData"
                   :yData="energyData"
                 />
               </el-tab-pane>
-              <el-tab-pane label="电" name="electricity">
+              <el-tab-pane label="订单数" name="count">
                 <TrendLineChart
-                  v-if="activeName === 'electricity'"
+                  v-if="activeName === 'count'"
                   :height="'100%'"
-                  :yName="'kM·h'"
+                  :yName="'单'"
                   :xData="xData"
-                  :yData="electricityData"
-                />
-              </el-tab-pane>
-              <el-tab-pane label="水" name="water">
-                <TrendLineChart
-                  v-if="activeName === 'water'"
-                  :height="'100%'"
-                  :yName="'t'"
-                  :xData="xData"
-                  :yData="waterData"
+                  :yData="carbonData"
                 />
               </el-tab-pane>
             </el-tabs>
@@ -83,18 +79,16 @@
           <div class="box-content flex-between">
             <div class="statistics-item flex-column-center">
 <!--              <lightning theme="outline" size="25" fill="#00d1ff"/>-->
-              <div class="item-count">58</div>
+              <div class="item-count">{{ overview.inbound.pendingReceipt }}</div>
               <div style="text-align: center">待入库</div>
             </div>
             <div class="statistics-item flex-column-center">
-<!--              <dashboard theme="outline" size="25" fill="#00d1ff"/>-->
-              <div class="item-count">10</div>
-              <div style="text-align: center">待质检</div>
+              <div class="item-count">{{ overview.inbound.supplierCount }}</div>
+              <div style="text-align: center">供应商</div>
             </div>
             <div class="statistics-item flex-column-center">
-<!--              <cycle theme="outline" size="25" fill="#00d1ff"/>-->
-              <div class="item-count">5</div>
-              <div style="text-align: center">待上架</div>
+              <div class="item-count">{{ overview.inbound.total }}</div>
+              <div style="text-align: center">入库总单</div>
             </div>
           </div>
         </div>
@@ -103,18 +97,16 @@
           <div class="box-content flex-between">
             <div class="statistics-item flex-column-center">
               <!--              <lightning theme="outline" size="25" fill="#00d1ff"/>-->
-              <div class="item-count">15</div>
-              <div style="text-align: center">待配货</div>
-            </div>
-            <div class="statistics-item flex-column-center">
-              <!--              <dashboard theme="outline" size="25" fill="#00d1ff"/>-->
-              <div class="item-count">10</div>
-              <div style="text-align: center">待拣货</div>
-            </div>
-            <div class="statistics-item flex-column-center">
-              <!--              <cycle theme="outline" size="25" fill="#00d1ff"/>-->
-              <div class="item-count">5</div>
+              <div class="item-count">{{ overview.outbound.pendingShip }}</div>
               <div style="text-align: center">待出库</div>
+            </div>
+            <div class="statistics-item flex-column-center">
+              <div class="item-count">{{ overview.outbound.customerCount }}</div>
+              <div style="text-align: center">客户数</div>
+            </div>
+            <div class="statistics-item flex-column-center">
+              <div class="item-count">{{ overview.outbound.total }}</div>
+              <div style="text-align: center">出库总单</div>
             </div>
           </div>
         </div>
@@ -123,17 +115,15 @@
           <div class="box-content flex-between">
             <div class="statistics-item flex-column-center">
               <!--              <lightning theme="outline" size="25" fill="#00d1ff"/>-->
-              <div class="item-count">15</div>
-              <div style="text-align: center">待截单</div>
+              <div class="item-count">{{ overview.other.pendingCheck }}</div>
+              <div style="text-align: center">待审核</div>
             </div>
             <div class="statistics-item flex-column-center">
-              <!--              <dashboard theme="outline" size="25" fill="#00d1ff"/>-->
-              <div class="item-count">10</div>
-              <div style="text-align: center">异常单</div>
+              <div class="item-count">{{ overview.other.goodsVariety }}</div>
+              <div style="text-align: center">商品种类</div>
             </div>
             <div class="statistics-item flex-column-center">
-              <!--              <cycle theme="outline" size="25" fill="#00d1ff"/>-->
-              <div class="item-count">5</div>
+              <div class="item-count">{{ overview.other.todayArrival }}</div>
               <div style="text-align: center">今日到货</div>
             </div>
           </div>
@@ -158,13 +148,12 @@
 
 <script setup>
 import CirclePieChart from './components/dashboard/CirclePieChart.vue'
-import alarmInfo from './components/dashboard/alarmInfo.vue'
-import LineChart from './components/dashboard/LineChart.vue'
 import barChart from './components/dashboard/BarChart.vue'
 import TrendLineChart from './components/dashboard/TrendLineChart.vue'
 import moment from 'moment'
 import { computed, nextTick, onBeforeUnmount, onMounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
+import request from '@/utils/request'
 
 const map = ref()
 const showWhich = computed(()=>{
@@ -183,10 +172,25 @@ const electricityData = ref([])
 const waterData = ref([])
 const energyData = ref([])
 const carbonData = ref([])
-const electricityTotal = ref(0)
-const powerTotal = ref(0)
-const carbonTotal = ref(0)
-const dailyP = ref({})
+
+const overview = ref({
+  inbound: {}, outbound: {}, other: { pendingCheck: 0, todayArrival: 0, lowStock: 0 },
+  warehouseCount: 0, goodsVariety: 0, totalQty: 0, warehouseGoods: [], monthlySales: []
+})
+
+function loadData() {
+  request({ url: '/dashboard/overview', method: 'get' }).then(res => {
+    overview.value = res.data
+    pieData.value = (res.data.warehouseGoods || []).map((g, i) => ({
+      value: g.value, name: g.name,
+      itemStyle: { color: ['#6be6c3','#5470c6','#e0c464','#ee4368','#c58bea','#297ef8'][i % 6] }
+    }))
+    const sales = (res.data.monthlySales || []).slice().reverse()
+    xData.value = sales.map(r => r.month)
+    energyData.value = sales.map(r => r.amount)
+    carbonData.value = sales.map(r => r.count)
+  })
+}
 
 const router = useRouter();
 function toDataBoard() {
@@ -700,20 +704,10 @@ function getNowTime() {
 }
 
 onMounted((() => {
-  if (timer.value) {
-    clearInterval(timer.value)
-  }
+  if (timer.value) clearInterval(timer.value)
   timer.value = setInterval(getNowTime, 1000)
-
-  getEquipmentData()
-  getAlarmList()
-  getAreaList()
-  nextTick((() => {
-    initMap()
-    getConsumption()
-    getEnergy()
-    getDailyPData()
-  }))
+  loadData()
+  nextTick(() => { initMap() })
 }))
 
 onBeforeUnmount(() => {
@@ -868,11 +862,11 @@ onBeforeUnmount(() => {
 }
 
 .content-map {
-  height: 65%;
+  height: 50%;
 }
 
 .content-chart {
-  height: calc(35% - 12px);
+  height: calc(50% - 12px);
   padding: 18px 30px;
 }
 
